@@ -1,115 +1,124 @@
-/**
- * Tile Wall Spawner++
- * Spawns random walls when specific tiles are overlapped by a sprite kind.
- * Supports MakeCode Blocks.
- */
-//% color=#FF8800 icon="\uf1b3" block="Tile Wall Spawner++"
-namespace tileWallSpawnerPlus {
-
-    let spawnedWalls: number[] = []
-
-    /**
-     * Direction options for wall spawning
-     */
+//% color="#FF8800" weight=100 icon="\uf1b2" block="Smart Walls"
+namespace smartWalls {
     export enum WallDirection {
-        //% block="left"
+        //% block="all"
+        All,
+        //% block="left only"
         Left,
-        //% block="right"
+        //% block="right only"
         Right,
-        //% block="up"
+        //% block="up only"
         Up,
-        //% block="down"
+        //% block="down only"
         Down,
-        //% block="any side"
-        Any
+        //% block="left or right"
+        LeftRight,
+        //% block="up or down"
+        UpDown
+    }
+
+    let currentDirection: WallDirection = WallDirection.All;
+    let wallProtection: boolean = false;
+
+    /**
+     * Set the wall direction to control where random walls can appear
+     */
+    //% block="set wall direction to %dir"
+    export function setWallDirection(dir: WallDirection) {
+        currentDirection = dir;
     }
 
     /**
-     * Trigger a random wall spawn when a sprite overlaps a target tile.
-     * @param kind the sprite kind to detect
-     * @param targetTile the tile image that triggers the event
-     * @param wallTile the tile image to use as the wall
-     * @param dir direction to spawn wall
+     * Create a wall not in the given direction around the sprite
      */
-    //% block="when %kind overlaps %targetTile make random %wallTile around it direction %dir"
-    //% kind.shadow=spritekind blockExternalInputs=1
-    //% targetTile.shadow=tileset_tile
-    //% wallTile.shadow=tileset_tile
-    export function spawnWallOnTileOverlap(
-        kind: number,
-        targetTile: Image,
-        wallTile: Image,
-        dir: WallDirection
-    ) {
-        scene.onOverlapTile(kind, targetTile, function (sprite, location) {
-            let id = location.col * 100 + location.row
-            if (spawnedWalls.indexOf(id) >= 0) return
+    //% block="create wall not in direction of %sprite using %wallSprite"
+    export function createWallNotInDirection(sprite: Sprite, wallSprite: Image) {
+        if (wallProtection) return;
+        wallProtection = true;
 
-            let possible: tiles.Location[] = []
-            switch (dir) {
-                case WallDirection.Left:
-                    possible.push(tiles.getTileLocation(location.col - 1, location.row))
-                    break
-                case WallDirection.Right:
-                    possible.push(tiles.getTileLocation(location.col + 1, location.row))
-                    break
-                case WallDirection.Up:
-                    possible.push(tiles.getTileLocation(location.col, location.row - 1))
-                    break
-                case WallDirection.Down:
-                    possible.push(tiles.getTileLocation(location.col, location.row + 1))
-                    break
-                case WallDirection.Any:
-                    possible = [
-                        tiles.getTileLocation(location.col - 1, location.row),
-                        tiles.getTileLocation(location.col + 1, location.row),
-                        tiles.getTileLocation(location.col, location.row - 1),
-                        tiles.getTileLocation(location.col, location.row + 1)
-                    ]
-                    break
-            }
+        let dx = 0;
+        let dy = 0;
 
-            // Filter valid map positions
-            possible = possible.filter(loc =>
-                loc.col >= 0 && loc.row >= 0 &&
-                loc.col < tiles.tilemapColumns() &&
-                loc.row < tiles.tilemapRows()
-            )
+        switch (currentDirection) {
+            case WallDirection.Left: dx = 1; break;
+            case WallDirection.Right: dx = -1; break;
+            case WallDirection.Up: dy = 1; break;
+            case WallDirection.Down: dy = -1; break;
+            case WallDirection.LeftRight: dx = Math.randomRange(0, 1) == 0 ? -1 : 1; break;
+            case WallDirection.UpDown: dy = Math.randomRange(0, 1) == 0 ? -1 : 1; break;
+            case WallDirection.All:
+            default:
+                dx = Math.randomRange(-1, 1);
+                dy = Math.randomRange(-1, 1);
+                break;
+        }
 
-            let pick = possible._pickRandom()
-            if (!pick) return
+        let x = sprite.x + dx * 16;
+        let y = sprite.y + dy * 16;
 
-            tiles.setTileAt(pick, wallTile)
-            tiles.setWallAt(pick, true)
+        let wall = sprites.create(wallSprite.clone(), SpriteKind.Projectile);
+        wall.setPosition(x, y);
+        wall.setFlag(SpriteFlag.GhostThroughWalls, true);
 
-            // Remember wall
-            spawnedWalls.push(pick.col * 100 + pick.row)
+        // Flash red
+        let original = wall.image.clone();
+        let flashImage = original.clone();
+        flashImage.fill(2);
+        wall.setImage(flashImage);
+        pause(250);
+        wall.setImage(original);
 
-            // Flash red effect
-            flashWallEffect(pick)
-        })
+        pause(100);
+        wallProtection = false;
     }
 
     /**
-     * Visual flash for spawned walls
+     * Create a wall not in direction using default wall sprite
      */
-    function flashWallEffect(loc: tiles.Location) {
-        const flash = sprites.create(img`
-            f f f f f f f f
-            f 2 2 2 2 2 2 f
-            f 2 2 2 2 2 2 f
-            f 2 2 2 2 2 2 f
-            f 2 2 2 2 2 2 f
-            f 2 2 2 2 2 2 f
-            f 2 2 2 2 2 2 f
-            f f f f f f f f
-        `, SpriteKind.Food)
-        tiles.placeOnTile(flash, loc)
-        flash.setFlag(SpriteFlag.Ghost, true)
-        flash.z = 1000
-        flash.startEffect(effects.fountain)
-        pause(randint(250, 400))
-        flash.destroy()
+    //% block="create wall not in direction of %sprite using default wall"
+    export function createWallDefault(sprite: Sprite) {
+        let defaultWall = img`
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+            8888888888888888
+        `;
+        createWallNotInDirection(sprite, defaultWall);
+    }
+
+    /**
+     * Demo setup: spawn default walls when player overlaps tile
+     */
+    //% block="setup demo for tile overlap example"
+    export function setupDemo() {
+        scene.setBackgroundColor(9);
+        let player = sprites.create(img`
+            . . . . . . . .
+            . . 2 2 2 2 . .
+            . 2 2 2 2 2 2 .
+            . 2 2 2 2 2 2 .
+            . . 2 2 2 2 . .
+            . . . 2 2 . . .
+            . . . 2 2 . . .
+            . . . . . . . .
+        `, SpriteKind.Player);
+        controller.moveSprite(player);
+        scene.cameraFollowSprite(player);
+
+        scene.onOverlapTile(SpriteKind.Player, sprites.dungeon.floorLight0, function (sprite, location) {
+            createWallDefault(sprite);
+        });
     }
 }
-

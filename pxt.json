@@ -1,5 +1,5 @@
 {
-    "name": "t.",
+    "name": "autowall",
     "description": "",
     "dependencies": {
         "device": "*"
