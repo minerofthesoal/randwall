@@ -1,5 +1,6 @@
 //% color="#FF8800" weight=100 icon="\uf1b2" block="Smart Walls"
 namespace smartWalls {
+
     export enum WallDirection {
         //% block="all"
         All,
@@ -21,11 +22,35 @@ namespace smartWalls {
     let wallProtection: boolean = false;
 
     /**
-     * Set the wall direction to control where random walls can appear
+     * Set the wall direction using enum
      */
     //% block="set wall direction to %dir"
     export function setWallDirection(dir: WallDirection) {
         currentDirection = dir;
+    }
+
+    /**
+     * New block: set wall direction via dropdown (N/E/S/W)
+     */
+    export enum CardinalDirection {
+        //% block="North"
+        North,
+        //% block="East"
+        East,
+        //% block="South"
+        South,
+        //% block="West"
+        West
+    }
+
+    //% block="set wall direction using dropdown %dir"
+    export function setWallDirectionDropdown(dir: CardinalDirection) {
+        switch (dir) {
+            case CardinalDirection.North: currentDirection = WallDirection.Up; break;
+            case CardinalDirection.East: currentDirection = WallDirection.Right; break;
+            case CardinalDirection.South: currentDirection = WallDirection.Down; break;
+            case CardinalDirection.West: currentDirection = WallDirection.Left; break;
+        }
     }
 
     /**
