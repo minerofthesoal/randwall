@@ -1,81 +1,44 @@
-//% color="#FF8800" weight=100 icon="\uf1b2" block="Smart Walls"
+//% color="#FF6600" weight=100 icon="\uf1b2" block="Smart Walls"
 namespace smartWalls {
 
-    export enum WallDirection {
-        //% block="all"
-        All,
-        //% block="left only"
-        Left,
-        //% block="right only"
-        Right,
-        //% block="up only"
-        Up,
-        //% block="down only"
-        Down,
-        //% block="left or right"
-        LeftRight,
-        //% block="up or down"
-        UpDown
-    }
+    type Dir = "N" | "E" | "S" | "W";
 
-    let currentDirection: WallDirection = WallDirection.All;
+    let allowedDirections: Dir[] = ["N", "E", "S", "W"];
     let wallProtection: boolean = false;
 
     /**
-     * Set the wall direction using enum
+     * Set allowed wall directions using an array of directions
      */
-    //% block="set wall direction to %dir"
-    export function setWallDirection(dir: WallDirection) {
-        currentDirection = dir;
-    }
-
-    /**
-     * New block: set wall direction via dropdown (N/E/S/W)
-     */
-    export enum CardinalDirection {
-        //% block="North"
-        North,
-        //% block="East"
-        East,
-        //% block="South"
-        South,
-        //% block="West"
-        West
-    }
-
-    //% block="set wall direction using dropdown %dir"
-    export function setWallDirectionDropdown(dir: CardinalDirection) {
-        switch (dir) {
-            case CardinalDirection.North: currentDirection = WallDirection.Up; break;
-            case CardinalDirection.East: currentDirection = WallDirection.Right; break;
-            case CardinalDirection.South: currentDirection = WallDirection.Down; break;
-            case CardinalDirection.West: currentDirection = WallDirection.Left; break;
+    //% block="set allowed wall directions to %dirs"
+    //% dirs.shadow="lists_create_with"
+    //% dirs.defl="N,E,S,W"
+    export function setAllowedDirections(dirs: string[]) {
+        let filtered: Dir[] = [];
+        for (let i = 0; i < dirs.length; i++) {
+            let d = dirs[i].trim().toUpperCase() as Dir;
+            if (d == "N" || d == "E" || d == "S" || d == "W") {
+                filtered.push(d);
+            }
         }
+        allowedDirections = filtered.length > 0 ? filtered : ["N", "E", "S", "W"];
     }
 
     /**
-     * Create a wall not in the given direction around the sprite
+     * Create a wall around the sprite using allowed directions array
      */
-    //% block="create wall not in direction of %sprite using %wallSprite"
-    export function createWallNotInDirection(sprite: Sprite, wallSprite: Image) {
+    //% block="create wall around %sprite using %wallSprite"
+    export function createWall(sprite: Sprite, wallSprite: Image) {
         if (wallProtection) return;
         wallProtection = true;
 
-        let dx = 0;
-        let dy = 0;
-
-        switch (currentDirection) {
-            case WallDirection.Left: dx = 1; break;
-            case WallDirection.Right: dx = -1; break;
-            case WallDirection.Up: dy = 1; break;
-            case WallDirection.Down: dy = -1; break;
-            case WallDirection.LeftRight: dx = Math.randomRange(0, 1) == 0 ? -1 : 1; break;
-            case WallDirection.UpDown: dy = Math.randomRange(0, 1) == 0 ? -1 : 1; break;
-            case WallDirection.All:
-            default:
-                dx = Math.randomRange(-1, 1);
-                dy = Math.randomRange(-1, 1);
-                break;
+        // Pick a random allowed direction
+        let dir: Dir = allowedDirections._pickRandom();
+        let dx = 0, dy = 0;
+        switch (dir) {
+            case "N": dy = -1; break;
+            case "E": dx = 1; break;
+            case "S": dy = 1; break;
+            case "W": dx = -1; break;
         }
 
         let x = sprite.x + dx * 16;
@@ -98,9 +61,9 @@ namespace smartWalls {
     }
 
     /**
-     * Create a wall not in direction using default wall sprite
+     * Create a wall with default wall sprite
      */
-    //% block="create wall not in direction of %sprite using default wall"
+    //% block="create wall around %sprite using default wall"
     export function createWallDefault(sprite: Sprite) {
         let defaultWall = img`
             8888888888888888
@@ -120,11 +83,11 @@ namespace smartWalls {
             8888888888888888
             8888888888888888
         `;
-        createWallNotInDirection(sprite, defaultWall);
+        createWall(sprite, defaultWall);
     }
 
     /**
-     * Demo setup: spawn default walls when player overlaps tile
+     * Demo: spawn default walls on tile overlap
      */
     //% block="setup demo for tile overlap example"
     export function setupDemo() {
